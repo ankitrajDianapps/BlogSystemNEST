@@ -94,7 +94,7 @@ export class UserService {
 
         const u = await this.userModel.findByIdAndUpdate(user._id, { $set: { lastLogin: new Date() } })
 
-        return { token: { accessToken, refreshToken } }
+        return { accessToken, refreshToken }
 
     }
 
@@ -135,7 +135,7 @@ export class UserService {
         const user = await this.userModel.findById(payload.userId)
         if (!user) throw new AppError("User not longer exists , account deleted", 400)
 
-        const accessToken = await this.authTokenService.generateAccessToken(user._id, user.email)
+        const accessToken = this.authTokenService.generateAccessToken(user._id, user.email)
 
         return { accessToken: accessToken }
 

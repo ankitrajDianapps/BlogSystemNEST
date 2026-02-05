@@ -6,6 +6,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Session } from '../../Schema/session.schema.js';
 import { Model } from 'mongoose';
 import { User } from '../../Schema/user.schema.js';
+import { messages } from '../../common/enums/messages.enum.js';
 
 
 @Controller('/api/auth')
@@ -19,14 +20,15 @@ export class UserController {
     @Post("/register")
     async registeruser(@Body() data: createUserDTO) {
         console.log(data)
-        return this.userService.registeruser(data)
+        const user = await this.userService.registeruser(data)
+        return { data: user, message: "User Registered Successfully" }
     }
 
     @Post("/login")
     async loginUser(@Body() data: loginUserDTO, @Req() req) {
 
-
-        return this.userService.loginUser(data, req.ip)
+        const token = await this.userService.loginUser(data, req.ip)
+        return { data: token, message: "LoggedIn successfully" }
     }
 
     @UseGuards(AuthGuard)
@@ -35,7 +37,7 @@ export class UserController {
 
         // a logout user can also do logout again
         await this.sessionModel.deleteOne({ userId: req.user._id })
-        return "User Logout Successfully"
+        return { message: "User Logout Successfully" }
     }
 
     @UseGuards(AuthGuard)
@@ -43,7 +45,7 @@ export class UserController {
     async getUserProfile(@Req() req) {
         const user: User = req.user;
 
-        return user;
+        return { data: user, message: "Profile fetched Successfully" }
 
     }
 
@@ -52,13 +54,17 @@ export class UserController {
     @Patch("/update-profile")
     async updateUser(@Body() data: updateUserDTO, @Req() req) {
 
-        return this.userService.updateUser(data, req.user)
+        const user = await this.userService.updateUser(data, req.user)
+        return { data: user, message: "User Updated successfully" }
 
     }
 
     @Post("/refresh")
     async refresh(@Body() data: refreshTokenDTO, @Req() req) {
-        return this.userService.refreshToken(data.refreshToken)
+        const token = await this.userService.refreshToken(data.refreshToken)
+
+        console.log(token)
+        return { data: token, message: "Token refreshed" }
 
     }
 
