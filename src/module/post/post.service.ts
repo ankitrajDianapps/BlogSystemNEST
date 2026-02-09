@@ -66,7 +66,7 @@ export class PostService {
 
 
 
-    async getAllPublishedPosts(query: any, user: User): Promise<Post | unknown> {
+    async getAllPublishedPosts(query: any, user: User): Promise<Post[] | unknown> {
 
         let { page, limit, category, tags, author } = query
 
@@ -233,7 +233,7 @@ export class PostService {
 
 
 
-    async getOwnPosts(user: User): Promise<Post | unknown> {
+    async getOwnPosts(user: User): Promise<Post[] | unknown> {
         const posts = await this.postModel.find({ author: user._id, status: "published" })
 
         return posts

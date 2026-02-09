@@ -8,12 +8,19 @@ import { CommentModule } from './module/comment/comment.module';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './module/auth/auth.module';
+import { AnalyticsModule } from './module/analytics/analytics.module';
+import { CronModule } from './module/cron/cron.module';
+import { ScheduleModule } from '@nestjs/schedule';
+
 
 @Module({
-  imports: [UserModule, PostModule, LikeModule, CommentModule,
+  imports: [UserModule, PostModule, LikeModule, CommentModule, AuthModule, AnalyticsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URL!, { autoIndex: true }),
-    AuthModule,
+    ScheduleModule.forRoot(),
+    CronModule,
+
+
   ],
   controllers: [AppController],
   providers: [AppService,],
