@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/Interceptor/Response.interceptor.js';
+import { ExceptionFiltter } from './common/filter/Exception.filter.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,6 +15,7 @@ async function bootstrap() {
     stopAtFirstError: true
   }))
 
+  app.useGlobalFilters(new ExceptionFiltter())
 
   app.useGlobalInterceptors(new ResponseInterceptor())
 

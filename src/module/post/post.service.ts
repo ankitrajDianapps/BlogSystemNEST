@@ -24,6 +24,10 @@ export class PostService {
 
     ) { }
 
+    private escapeRegExp(string: string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    }
+
 
     async createPost(data: createPostDTO, user: User) {
 
@@ -31,11 +35,11 @@ export class PostService {
             throw new AppError("Only Authors are allowed to create Post", 400)
         }
 
-        const title = data.title.toLowerCase().replace(/ {2,}/g, " ")
+        const title = data.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, ' ')
         data.title = title
 
         const randomStr = Math.random().toString(36).substring(2, 8);
-        const slug = title.replaceAll(" ", "-") + "-by-" + user.userName + "-" + randomStr;
+        const slug = title.replace(/\s+/g, "-") + "-by-" + user.userName + "-" + randomStr;
 
         //! problem -> what if a user tries to post with same title then slug becomes same
         const postWithSameSlug = await this.postModel.find({ slug: slug })
@@ -44,8 +48,6 @@ export class PostService {
             throw new AppError("Internal Server Error", 500)
         }
 
-        console.log(data)
-        console.log(user)
         const post = new this.postModel(
             {
                 title: data.title,
@@ -61,6 +63,7 @@ export class PostService {
         )
 
         await post.save()
+        await post.populate("author", "userName bio role")
         return post;
     }
 
@@ -79,14 +82,14 @@ export class PostService {
 
         if (category) {
             orConditions.push({
-                category: new RegExp(`${category.trim()}`, "i")
+                category: new RegExp(`${this.escapeRegExp(category.trim())}`, "i")
             })
         }
 
         if (tags) {
             orConditions.push({
                 tags: {
-                    $in: tags.split(",").map(tag => new RegExp(`${tag.trim()}`, "i"))
+                    $in: tags.split(",").map(tag => new RegExp(`${this.escapeRegExp(tag.trim())}`, "i"))
                 }
             })
         }
@@ -95,7 +98,7 @@ export class PostService {
 
         if (author) {
             const userDoc = await this.uerModel.find({
-                userName: new RegExp(`${author}`, "i")
+                userName: new RegExp(`${this.escapeRegExp(author)}`, "i")
             })
 
             const ids: {}[] = []
@@ -120,7 +123,7 @@ export class PostService {
         //determine all the post of the logged in user
         const posts = await this.postModel.find(
             filter
-        ).skip(skip).limit(limit)
+        ).skip(skip).limit(limit).populate("author", "userName bio role")
 
 
         if (posts.length == 0) throw new AppError("No posts at this Page", 404)
@@ -129,11 +132,10 @@ export class PostService {
     }
 
 
-
     async getPostById(id: mongoose.Types.ObjectId, user: User, ip: string): Promise<Object | null> {
         const post = await this.postModel.findOne(
             { _id: id, status: "published" }
-        )
+        ).populate("author", "userName bio role")
 
         if (!post) throw new AppError(messages.POST_NOT_FOUND, 404)
 
@@ -184,7 +186,7 @@ export class PostService {
             postToUpdate = await this.postModel.findOne({ _id: id, status: "draft" }).populate("author")
         }
         else {
-            postToUpdate = await this.postModel.findOne({ _id: id, status: "published" }).populate("author")
+            postToUpdate = await this.postModel.findOne({ _id: id }).populate("author")
         }
 
         let message = ""
@@ -196,26 +198,28 @@ export class PostService {
 
         if (postToUpdate?.author?.id?.toString() != user._id) throw new AppError(messages.UNAUTHORIZED_ACTION, 403)
 
+        const updatedData: any = {}
+
         // if user has changes the title then we need to format the title and slug
         if (post?.title) {
-            const title = post.title.toLowerCase().replace(/ {2,}/g, " ")
-            postToUpdate.title = title
+            const title = post.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, ' ')
+            updatedData.title = title
             const randomStr = Math.random().toString(36).substring(2, 8);
-            const slug = title.replaceAll(" ", "-") + "-by-" + user.userName + "-" + randomStr;
+            const slug = title.replace(/\s+/g, "-") + "-by-" + user.userName + "-" + randomStr;
 
-            postToUpdate.title = title;
-            postToUpdate.slug = slug
+            updatedData.title = title;
+            updatedData.slug = slug
         }
 
-        if (post?.content) postToUpdate.content = post.content
-        if (post?.excerpt) postToUpdate.excerpt = post.excerpt
-        if (post?.tags) postToUpdate.tags = post.tags
-        if (post?.category) postToUpdate.category = post.category
+        if (post?.content) updatedData.content = post.content
+        if (post?.excerpt) updatedData.excerpt = post.excerpt
+        if (post?.tags) updatedData.tags = post.tags
+        if (post?.category) updatedData.category = post.category
 
-        if (draftToPublish) postToUpdate.status = "published"
+        if (draftToPublish) updatedData.status = "published"
 
         //  due to any reason from the server side , if it create the same slug for two posts then in that case lets check and throw internal server Error
-        const isPostSlugExists = await this.postModel.exists({ slug: postToUpdate?.slug })
+        const isPostSlugExists = await this.postModel.exists({ slug: updatedData?.slug })
         if (isPostSlugExists) {
             console.log("same slug already exist")
             throw new AppError("Internal Server Error", 500)
@@ -223,9 +227,9 @@ export class PostService {
 
         const updatedPost = await this.postModel.findByIdAndUpdate(
             id,
-            postToUpdate,
+            { $set: updatedData },
             { new: true }
-        )
+        ).populate("author", "userName role bio").lean()
 
 
         return updatedPost;
@@ -234,7 +238,7 @@ export class PostService {
 
 
     async getOwnPosts(user: User): Promise<Post[] | unknown> {
-        const posts = await this.postModel.find({ author: user._id, status: "published" })
+        const posts = await this.postModel.find({ author: user._id, status: "published" }).populate("author", "userName bio role")
 
         return posts
     }

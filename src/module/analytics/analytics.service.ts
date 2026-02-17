@@ -79,10 +79,11 @@ export class AnalyticsService {
         const author = (post.author) as any
 
         return {
+            _id: post._id.toString(),
             title: post.title,
             author: author.userName,
             totalViews: totalViews,
-            totalComment: commentsCount,
+            totalComments: commentsCount,
             likeCount: likeCount
         }
     }
@@ -92,11 +93,9 @@ export class AnalyticsService {
     async todayTrendingPost() {
         //lets determine the tredingPost as - searach in  table TrendinPost for the documents whose trendind_at field is greater than currentTime-1 minute
 
-        const trendingDate = new Date(Date.now() - 2 * 60 * 1000)
+        const trendingDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
         const todaysTrendingPost = await this.trendingPostModel.find({ trendingAt: { $gte: trendingDate } }).populate("post", "title")
-
-        console.log(todaysTrendingPost)
 
         if (todaysTrendingPost.length == 0) {
             throw new AppError("No Trending Post for today", 400)
@@ -109,7 +108,8 @@ export class AnalyticsService {
 
     async authorPerformaceMetrics(authorId: mongoose.Types.ObjectId) {
         //check is the user with this id author or not
-        const user = await this.userModel.findOne({ _id: authorId })
+
+        const user = await this.userModel.findById(authorId)
 
         if (!user) throw new AppError("User not found", 400)
 
@@ -137,7 +137,7 @@ export class AnalyticsService {
         const totalComments = await this.analyticsQueryies.computeTotalCommentsForUserPosts(authorId)
 
         //most viewed post of the  author
-        const post = await this.postModel.find({ author: authorId }).sort({ viewCount: -1 }).limit(1).select("title viewCount")
+        const post = await this.postModel.findOne({ author: authorId }).sort({ viewCount: -1 }).limit(1).select("title viewCount").lean()
 
         // determine total likes the user gets in his entire posts
 

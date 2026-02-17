@@ -59,7 +59,7 @@ export class CommentService {
         if (!post) throw new AppError(messages.POST_NOT_FOUND, 400)
 
         //if post exist then determine the comments of that post
-        const comment = await this.commentModel.find({ post: postId, parentCommentId: parentCommentId }).populate("user", "userName avatar")
+        const comment = await this.commentModel.find({ post: postId, parentCommentId: parentCommentId }).populate("user", "userName avatar bio")
 
         return comment
     }
@@ -82,9 +82,9 @@ export class CommentService {
             id,
             { content: content, isEdited: true },
             { new: true }
-        )
+        ).populate("user", "userName  bio")
 
-        return updatedComment
+        return updatedComment;
 
     }
 

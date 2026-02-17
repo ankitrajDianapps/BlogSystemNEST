@@ -32,7 +32,7 @@ export class createUserDTO {
     @IsOptional()
     bio: string;
 
-    @IsIn(["user", "admin", "author"])
+    @IsIn(["user", "author"])
     @IsString()
     @IsNotEmpty()
     role: string;

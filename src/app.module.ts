@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './module/user/user.module';
 import { PostModule } from './module/post/post.module';
-import { LikeModule } from './module/like/like.module';
 import { CommentModule } from './module/comment/comment.module';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -14,7 +13,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
-  imports: [UserModule, PostModule, LikeModule, CommentModule, AuthModule, AnalyticsModule,
+  imports: [UserModule, PostModule, CommentModule, AuthModule, AnalyticsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URL!, { autoIndex: true }),
     ScheduleModule.forRoot(),

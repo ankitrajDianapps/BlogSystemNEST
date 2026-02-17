@@ -11,7 +11,6 @@ export class ResponseInterceptor implements NestInterceptor {
         return next.handle()
             .pipe(
                 map((response) => {
-                    console.log(response)
                     return {
                         success: true,
                         message: response.message,

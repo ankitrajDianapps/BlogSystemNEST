@@ -47,7 +47,8 @@ export class UserService {
             {
                 userName: data.userName,
                 email: data.email,
-                role: data.role,
+                role: data.role === "admin" ? "user" : data.role, // Prevent admin registration publicly
+
                 password: hashedPassword,
                 bio: data.bio,
                 fullName: data.fullName
@@ -122,7 +123,16 @@ export class UserService {
         if (!refreshToken) throw new AppError("refresh token required", 400)
 
         const secret = this.configService.get("REFRESH_SECRET")
-        const payload = this.jwtService.verify(refreshToken, { secret })
+
+        let payload;
+        try {
+            payload = this.jwtService.verify(refreshToken, { secret })
+        } catch (err) {
+            if (err instanceof Error) {
+                console.log("Invalid signature")
+                throw new AppError("Invalid Signature", 401)
+            }
+        }
 
         console.log(payload.userId)
 
