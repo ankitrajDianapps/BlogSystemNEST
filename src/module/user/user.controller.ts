@@ -1,6 +1,6 @@
 import { Body, ClassSerializerInterceptor, Controller, Get, Patch, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service.js';
-import { createUserDTO, loginUserDTO, refreshTokenDTO, updateUserDTO } from './DTO/user.dto.js';
+import { changePasswordDTO, createUserDTO, forgotPasswordDTO, loginUserDTO, refreshTokenDTO, updateUserDTO, verifyOtpDTO } from './DTO/user.dto.js';
 import { AuthGuard } from '../auth/guard/auth-guard.guard.js';
 import { InjectModel } from '@nestjs/mongoose';
 import { Session } from '../../Schema/session.schema.js';
@@ -101,10 +101,28 @@ export class UserController {
     }
 
 
+    @Post("/forgot-password")
+    async forgotPassword(@Body() data: forgotPasswordDTO) {
+        const otp = await this.userService.forgotPassword(data.email)
+
+        return { data: { otp: otp, message: "Otp sent Successfully" } }
+    }
+
+    @Post("/verify-otp")
+    async verifyOtp(@Body() data: verifyOtpDTO) {
 
 
+        const token = await this.userService.verifyOtp(data.otp, data.email)
+        return { data: token, message: "OTP verified & token sent successfully" }
+    }
 
 
+    @Post("/change-password")
+    async changePassword(@Body() data: changePasswordDTO) {
+
+        this.userService.changePassword(data.token, data.newPassword)
+        return { message: "Password changed successfully" }
+    }
 
 
     sanitizeUserId(user: any) {

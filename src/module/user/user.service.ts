@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Post } from '@nestjs/common';
 import { createUserDTO, loginUserDTO, updateUserDTO } from './DTO/user.dto.js';
 import bcrypt from "bcryptjs"
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,6 +9,8 @@ import { AuthTokenService } from '../auth/auth-token.service.js';
 import { Session } from '../../Schema/session.schema.js';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../email/email.service.js';
+import { Otp } from '../../Schema/otp.schema.js';
 
 
 @Injectable()
@@ -17,17 +19,19 @@ export class UserService {
         @InjectModel(User.name) private userModel: Model<User>,
 
         @InjectModel(Session.name) private sessionModel: Model<Session>,
+        @InjectModel(Otp.name) private otpModel: Model<Otp>,
 
         private authTokenService: AuthTokenService,
         private jwtService: JwtService,
-        private configService: ConfigService
+        private configService: ConfigService,
+        private emailService: EmailService
     ) { }
 
     async registeruser(data: createUserDTO): Promise<User | null | Object> {
 
         const hashedPassword = await bcrypt.hash(data.password, 10)
 
-        //check if user with same or userName already exists
+        // check if user with same or userName already exists
         const isUserNameExists: User | null = await this.userModel.findOne(
             { userName: data.userName }
         )
@@ -47,7 +51,7 @@ export class UserService {
             {
                 userName: data.userName,
                 email: data.email,
-                role: data.role === "admin" ? "user" : data.role, // Prevent admin registration publicly
+                role: data.role,
 
                 password: hashedPassword,
                 bio: data.bio,
@@ -153,4 +157,99 @@ export class UserService {
 
 
 
+
+    async forgotPassword(email: string): Promise<String> {
+        //now lets check is there any user exists with this email or not
+        const user = await this.userModel.findOne({ email: email })
+        if (!user) {
+            throw new AppError("User not found with this email", 400)
+        }
+
+        const otp = Math.floor(Math.random() * 1000000).toString()
+        // await this.emailService.sendOTPEmail(email, user.userName, otp)
+
+        // delete if any otp already exists for the same user
+        await this.otpModel.deleteOne({ userId: user._id })
+
+        const otpData = new this.otpModel({
+            otp: otp,
+            userId: user._id,
+            isVerified: false,
+            expireAt: new Date(Date.now() + 2 * 60 * 1000)
+        })
+
+        await otpData.save()
+
+        return otpData.otp;
+    }
+
+
+
+    async verifyOtp(otp: string, email: string) {
+
+        // lets check is the user still exists or deleted
+        const user = await this.userModel.findOne({ email: email })
+        if (!user) throw new AppError("User not found", 400)
+
+        // check otp table if any otp entry  exists for this user
+
+        const otpDoc = await this.otpModel.findOne({ userId: user._id })
+        if (!otpDoc) throw new AppError("Verification Failed", 400)
+
+
+        if (otpDoc.otp != otp) { throw new AppError("wrong OTP", 400) }
+
+        // it otp entered by user is correct is already verified
+
+        if (otpDoc.isVerified) throw new AppError("Otp is already verified", 400)
+
+        // now otp has been verified , now update this opt doc   
+        await this.otpModel.findOneAndUpdate(otpDoc._id, { isVerified: true })
+
+        // now create a token which will be used to access the
+        const token = this.jwtService.sign({
+            userId: user._id,
+            type: "forgot password"
+        }, {
+            secret: this.configService.get("OTP_SECRET"),
+            expiresIn: "5m"
+        })
+
+        return { token: token }
+
+    }
+
+
+    async changePassword(token: string, newPassword: string) {
+
+        //check the token 
+        const secret = this.configService.get("OTP_SECRET")
+
+        let payload;
+        try {
+            payload = this.jwtService.verify(token, { secret })
+        } catch (e: any) {
+            throw new AppError("Invalid Signature", 400)
+        }
+
+
+        if (payload.type != "forgot password") throw new AppError("Invalid Token", 401);
+
+        const user = await this.userModel.findById(payload.userId)
+        if (!user) throw new AppError("User not Exists", 400)
+
+        // now change the password     
+        const bcryptedPassword = await bcrypt.hash(newPassword, 10)
+
+        // now update the password
+        await this.userModel.findByIdAndUpdate(user._id, { password: bcryptedPassword })
+
+        // now logout the user session from all the device
+        await this.sessionModel.deleteMany({ userId: user._id })
+
+        // also delete any otp exists in otp table , so that if any other trying to change password at same time can change it
+        await this.otpModel.deleteMany({ userId: user._id })
+    }
+
 }
+
