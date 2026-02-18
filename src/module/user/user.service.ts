@@ -31,21 +31,21 @@ export class UserService {
 
         const hashedPassword = await bcrypt.hash(data.password, 10)
 
-        //check if user with same or userName already exists
-        // const isUserNameExists: User | null = await this.userModel.findOne(
-        //     { userName: data.userName }
-        // )
+        // check if user with same or userName already exists
+        const isUserNameExists: User | null = await this.userModel.findOne(
+            { userName: data.userName }
+        )
 
-        // if (isUserNameExists) {
-        //     throw new AppError("userName already exists", 400)
-        // }
+        if (isUserNameExists) {
+            throw new AppError("userName already exists", 400)
+        }
 
-        // const isEmailExists = await this.userModel.findOne(
-        //     { email: data.email }
-        // )
-        // if (isEmailExists) {
-        //     throw new AppError("email already exists", 409)
-        // }
+        const isEmailExists = await this.userModel.findOne(
+            { email: data.email }
+        )
+        if (isEmailExists) {
+            throw new AppError("email already exists", 409)
+        }
 
         const registeredUser = new this.userModel(
             {
