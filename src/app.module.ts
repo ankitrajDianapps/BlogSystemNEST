@@ -10,6 +10,8 @@ import { AuthModule } from './module/auth/auth.module';
 import { AnalyticsModule } from './module/analytics/analytics.module';
 import { CronModule } from './module/cron/cron.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EmailModule } from './module/email/email.module';
+import { EmailService } from './module/email/email.service.js';
 
 
 @Module({
@@ -18,10 +20,11 @@ import { ScheduleModule } from '@nestjs/schedule';
     MongooseModule.forRoot(process.env.MONGO_URL!, { autoIndex: true }),
     ScheduleModule.forRoot(),
     CronModule,
+    EmailModule,
 
 
   ],
   controllers: [AppController],
-  providers: [AppService,],
+  providers: [AppService, EmailService],
 })
 export class AppModule { }

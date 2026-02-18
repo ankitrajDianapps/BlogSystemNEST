@@ -11,16 +11,22 @@ export class ExceptionFiltter implements ExceptionFilter {
         const res = ctxt.getResponse()
 
         console.log(exception)
-
+        console.log(typeof exception)
 
         if (exception instanceof HttpException) {
-            const exp = exception.getResponse()
-            console.log(exp)
-            const msg = (exp as any).message
-            const message = Array.isArray(msg) ? msg[0] : msg;
-            return res.status((exp as any).statusCode).json({ statusCode: (exp as any).statusCode, message: message })
-        }
+            const status = exception.getStatus();
+            const response = exception.getResponse();
 
+            const message =
+                typeof response === "string"
+                    ? response
+                    : (response as any).message;
+
+            return res.status(status).json({
+                statusCode: status,
+                message,
+            });
+        }
 
 
         const mongoExceptions = [
@@ -38,11 +44,14 @@ export class ExceptionFiltter implements ExceptionFilter {
             { code: 112, statusCode: 500, message: "Write conflict" }
         ];
 
-        const exp = mongoExceptions.find(exp => exp.code === 11000)
-        console.log(exp)
+        const exp = mongoExceptions.find(exp => exp.code === exception?.code)
 
 
-        return res.status(exp?.statusCode).json({ statusCode: exp?.statusCode, message: exp?.message })
+        if (exp) {
+            return res.status(exp?.statusCode).json({ statusCode: exp?.statusCode, message: exp?.message })
+        }
+
+        return res.status(500).json({ statusCode: 500, message: "Internal Server Error" })
 
 
 

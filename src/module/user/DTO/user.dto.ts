@@ -1,4 +1,4 @@
-import { IsBoolean, IsDate, IsEmail, IsEmpty, IsIn, IsNotEmpty, IsOptional, isString, IsString, Matches, maxLength, MaxLength, minLength, MinLength, } from "class-validator";
+import { IsBoolean, IsDate, IsEmail, IsEmpty, IsIn, IsNotEmpty, IsOptional, isString, IsString, Matches, maxLength, MaxLength, min, minLength, MinLength, } from "class-validator";
 
 export class createUserDTO {
 
@@ -32,7 +32,7 @@ export class createUserDTO {
     @IsOptional()
     bio: string;
 
-    @IsIn(["user", "author"])
+    @IsIn(["user", "admin", "author"])
     @IsString()
     @IsNotEmpty()
     role: string;
@@ -81,4 +81,40 @@ export class refreshTokenDTO {
     @IsString()
     @IsNotEmpty()
     refreshToken: string
+}
+
+
+export class forgotPasswordDTO {
+
+    @IsEmail()
+    @IsString()
+    @IsNotEmpty()
+    email: string
+}
+
+
+export class verifyOtpDTO {
+
+    @IsString()
+    @IsNotEmpty()
+    otp: string
+
+    @IsEmail()
+    @IsString()
+    @IsNotEmpty()
+    email: string
+}
+
+export class changePasswordDTO {
+
+    @MaxLength(30)
+    @MinLength(3)
+    @IsString()
+    @IsNotEmpty()
+    newPassword: string
+
+
+    @IsString()
+    @IsNotEmpty()
+    token: string
 }

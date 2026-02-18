@@ -24,10 +24,6 @@ export class PostService {
 
     ) { }
 
-    private escapeRegExp(string: string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-    }
-
 
     async createPost(data: createPostDTO, user: User) {
 
@@ -35,11 +31,11 @@ export class PostService {
             throw new AppError("Only Authors are allowed to create Post", 400)
         }
 
-        const title = data.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, ' ')
+        const title = data.title.toLowerCase().replace(/ {2,}/g, " ")
         data.title = title
 
         const randomStr = Math.random().toString(36).substring(2, 8);
-        const slug = title.replace(/\s+/g, "-") + "-by-" + user.userName + "-" + randomStr;
+        const slug = title.replaceAll(" ", "-") + "-by-" + user.userName + "-" + randomStr;
 
         //! problem -> what if a user tries to post with same title then slug becomes same
         const postWithSameSlug = await this.postModel.find({ slug: slug })
@@ -82,14 +78,14 @@ export class PostService {
 
         if (category) {
             orConditions.push({
-                category: new RegExp(`${this.escapeRegExp(category.trim())}`, "i")
+                category: new RegExp(`${category.trim()}`, "i")
             })
         }
 
         if (tags) {
             orConditions.push({
                 tags: {
-                    $in: tags.split(",").map(tag => new RegExp(`${this.escapeRegExp(tag.trim())}`, "i"))
+                    $in: tags.split(",").map(tag => new RegExp(`${tag.trim()}`, "i"))
                 }
             })
         }
@@ -98,7 +94,7 @@ export class PostService {
 
         if (author) {
             const userDoc = await this.uerModel.find({
-                userName: new RegExp(`${this.escapeRegExp(author)}`, "i")
+                userName: new RegExp(`${author}`, "i")
             })
 
             const ids: {}[] = []
@@ -186,7 +182,7 @@ export class PostService {
             postToUpdate = await this.postModel.findOne({ _id: id, status: "draft" }).populate("author")
         }
         else {
-            postToUpdate = await this.postModel.findOne({ _id: id }).populate("author")
+            postToUpdate = await this.postModel.findOne({ _id: id, status: "published" }).populate("author")
         }
 
         let message = ""
@@ -202,10 +198,10 @@ export class PostService {
 
         // if user has changes the title then we need to format the title and slug
         if (post?.title) {
-            const title = post.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, ' ')
+            const title = post.title.toLowerCase().replace(/ {2,}/g, " ")
             updatedData.title = title
             const randomStr = Math.random().toString(36).substring(2, 8);
-            const slug = title.replace(/\s+/g, "-") + "-by-" + user.userName + "-" + randomStr;
+            const slug = title.replaceAll(" ", "-") + "-by-" + user.userName + "-" + randomStr;
 
             updatedData.title = title;
             updatedData.slug = slug
